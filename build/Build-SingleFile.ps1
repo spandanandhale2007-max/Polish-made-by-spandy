@@ -122,12 +122,62 @@ if ($firstBytes.Length -ge 3 -and $firstBytes[0] -eq 0xEF -and $firstBytes[1] -e
 $asServed = [System.Text.Encoding]::UTF8.GetString($firstBytes)
 try {
     [void][scriptblock]::Create($asServed)
-    Write-Host '  irm | iex simulation: parses as a scriptblock' -ForegroundColor Green
+    Write-Host '  irm | iex: parses as a scriptblock' -ForegroundColor Green
 } catch {
     Write-Host '  BUNDLE FAILS THE irm | iex PATH' -ForegroundColor Red
     Write-Host ("    {0}" -f $_.Exception.Message) -ForegroundColor Red
     throw 'bundle would fail when piped from the web'
 }
+
+# Parsing is not enough. Under iex the param block is evaluated in the caller's
+# scope, and attribute validation runs THEN, not at parse time. A [ValidateSet]
+# on an unsupplied [string] parameter throws
+#   "The attribute cannot be added because variable X with value would no
+#    longer be valid"
+# which no parse check catches. Evaluate the param block on its own to reproduce
+# it without launching the GUI.
+$bundleAst = [System.Management.Automation.Language.Parser]::ParseFile($OutFile, [ref]$null, [ref]$null)
+if ($bundleAst.ParamBlock) {
+    $paramText = $bundleAst.ParamBlock.Extent.Text
+    $probe = [powershell]::Create()
+    try {
+        [void]$probe.AddScript($paramText)
+        [void]$probe.Invoke()
+        if ($probe.Streams.Error.Count -gt 0) {
+            Write-Host '  PARAM BLOCK FAILS UNDER iex' -ForegroundColor Red
+            foreach ($e in $probe.Streams.Error) { Write-Host ("    {0}" -f $e.ToString()) -ForegroundColor Red }
+            throw 'param block would throw when the script is piped from the web'
+        }
+        Write-Host '  irm | iex: param block evaluates cleanly' -ForegroundColor Green
+    } finally {
+        $probe.Dispose()
+    }
+}
+
+# $PSCmdlet does not exist under iex. Flag any use of it outside a function.
+$psCmdletUses = $bundleAst.FindAll({
+    param($n)
+    $n -is [System.Management.Automation.Language.VariableExpressionAst] -and
+    $n.VariablePath.UserPath -eq 'PSCmdlet'
+}, $true)
+$scriptScopeUses = @()
+foreach ($u in $psCmdletUses) {
+    $p = $u.Parent
+    $inFunction = $false
+    while ($p) {
+        if ($p -is [System.Management.Automation.Language.FunctionDefinitionAst]) { $inFunction = $true; break }
+        $p = $p.Parent
+    }
+    if (-not $inFunction) { $scriptScopeUses += $u }
+}
+if ($scriptScopeUses.Count -gt 0) {
+    Write-Host '  $PSCmdlet USED AT SCRIPT SCOPE' -ForegroundColor Red
+    foreach ($u in $scriptScopeUses) {
+        Write-Host ("    line {0}: {1}" -f $u.Extent.StartLineNumber, $u.Extent.Text) -ForegroundColor Red
+    }
+    throw '$PSCmdlet is unavailable under iex; use an explicit variable instead'
+}
+Write-Host '  irm | iex: no $PSCmdlet at script scope' -ForegroundColor Green
 
 $size = (Get-Item -LiteralPath $OutFile).Length
 Write-Host ('  wrote {0}' -f $OutFile) -ForegroundColor Green

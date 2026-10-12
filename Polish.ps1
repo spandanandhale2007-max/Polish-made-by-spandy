@@ -57,39 +57,35 @@
     https://github.com/spandanandhale2007-max/Polish-made-by-spandy
 #>
 
-[CmdletBinding(DefaultParameterSetName = 'Gui')]
+# A plain param() with no [CmdletBinding], no [ValidateSet] and no parameter
+# sets. That is deliberate, because Polish is distributed as:
+#
+#     irm <url> | iex
+#
+# Under iex the param block is evaluated in the CALLER'S scope rather than bound
+# as a real cmdlet invocation. Three things follow:
+#
+#   1. An unsupplied [string] parameter becomes '' , and PowerShell then refuses
+#      to attach a ValidateSet that does not list '' :
+#        "The attribute cannot be added because variable Preset with value
+#         would no longer be valid"
+#      So presets are validated by hand below instead.
+#   2. $PSCmdlet does not exist, so ParameterSetName is unavailable. The mode is
+#      worked out from which parameters were actually supplied.
+#   3. Parameter sets cannot be enforced anyway, for the same reason.
+#
+# Running from a file is unaffected; this shape works for both paths.
 param(
-    [Parameter(ParameterSetName = 'Gui')]
     [switch]$Gui,
-
-    [Parameter(ParameterSetName = 'Run')]
-    [ValidateSet('safe', 'recommend', 'all', 'default')]
     [string]$Preset,
-
-    [Parameter(ParameterSetName = 'Run')]
     [string[]]$Only,
-
-    [Parameter(ParameterSetName = 'Run')]
     [string[]]$Skip,
-
-    [Parameter(ParameterSetName = 'Run')]
     [switch]$DryRun,
-
-    [Parameter(ParameterSetName = 'Run')]
     [switch]$NoRestorePoint,
-
-    [Parameter(ParameterSetName = 'Run')]
     [switch]$Yes,
-
-    [Parameter(ParameterSetName = 'Undo')]
     [string]$Undo,
-
-    [Parameter(ParameterSetName = 'List')]
     [switch]$List,
-
-    [Parameter(ParameterSetName = 'Processes')]
     [switch]$Processes,
-
     [switch]$Quiet,
     [switch]$NoElevate,
     [switch]$NoPause
@@ -169,7 +165,25 @@ $sys = Get-PolishSystem
 $catalog = Get-PolishCatalog
 $actions = Get-PolishApplicableActions -Sys $sys -Catalog $catalog
 
-switch ($PSCmdlet.ParameterSetName) {
+# ---------------------------------------------------------------------------
+#  Mode, worked out from what was supplied (see the note on the param block)
+# ---------------------------------------------------------------------------
+$validPresets = @('safe', 'recommend', 'all', 'default')
+if ($Preset -and ($validPresets -notcontains $Preset.ToLowerInvariant())) {
+    Write-Host ''
+    Write-Host ("  '{0}' is not a valid preset." -f $Preset) -ForegroundColor Yellow
+    Write-Host ("  Choose one of: {0}" -f ($validPresets -join ', ')) -ForegroundColor Gray
+    Write-Host ''
+    exit 1
+}
+
+$mode = 'Gui'
+if     ($List)      { $mode = 'List' }
+elseif ($Processes) { $mode = 'Processes' }
+elseif ($Undo)      { $mode = 'Undo' }
+elseif ($Preset -or $Only -or $Skip -or $DryRun) { $mode = 'Run' }
+
+switch ($mode) {
 
     'List' {
         Show-PolishBanner -Sys $sys
@@ -256,7 +270,7 @@ switch ($PSCmdlet.ParameterSetName) {
     }
 }
 
-if (-not $NoPause -and -not $Quiet -and $PSCmdlet.ParameterSetName -ne 'Gui' -and $Host.Name -eq 'ConsoleHost') {
+if (-not $NoPause -and -not $Quiet -and $mode -ne 'Gui' -and $Host.Name -eq 'ConsoleHost') {
     Write-Host ''
     Write-Host '  Press any key to close...' -ForegroundColor DarkGray
     try { [void]$Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown') } catch { }
