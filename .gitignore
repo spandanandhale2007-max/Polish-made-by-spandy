@@ -1,0 +1,11 @@
+﻿# Polish runtime data (per machine, never committed)
+logs/
+runs/
+*.log
+
+# editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*.swp
