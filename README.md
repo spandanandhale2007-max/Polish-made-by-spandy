@@ -16,7 +16,7 @@ Works on Windows 10 and 11. Detects your hardware and only offers what applies.
 Open PowerShell **as administrator** and paste:
 
 ```powershell
-irm https://raw.githubusercontent.com/YOUR-USERNAME/polish/main/dist/Polish.ps1 | iex
+irm https://raw.githubusercontent.com/spandanandhale2007-max/Polish-made-by-spandy/main/dist/Polish.ps1 | iex
 ```
 
 That opens the window. Nothing happens until you click a button.

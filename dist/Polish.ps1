@@ -54,7 +54,7 @@
     Reverses the most recent run.
 
 .LINK
-    https://github.com/YOUR-USERNAME/polish
+    https://github.com/spandanandhale2007-max/Polish-made-by-spandy
 #>
 
 [CmdletBinding(DefaultParameterSetName = 'Gui')]
@@ -110,7 +110,7 @@ $script:PolishLogFile  = $null
 #region POLISH_BUNDLED_SOURCES
 # ---------------------------------------------------------------------------
 #  This file is GENERATED. Do not edit it by hand.
-#  Built from src/ by build/Build-SingleFile.ps1 on 2026-10-12 11:02
+#  Built from src/ by build/Build-SingleFile.ps1 on 2026-10-12 11:07
 #  Edit the files under src/ and rebuild.
 # ---------------------------------------------------------------------------
 

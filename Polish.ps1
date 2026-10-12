@@ -54,7 +54,7 @@
     Reverses the most recent run.
 
 .LINK
-    https://github.com/YOUR-USERNAME/polish
+    https://github.com/spandanandhale2007-max/Polish-made-by-spandy
 #>
 
 [CmdletBinding(DefaultParameterSetName = 'Gui')]

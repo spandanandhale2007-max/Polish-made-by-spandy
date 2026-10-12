@@ -139,5 +139,5 @@ if ($size -gt 2MB) {
 
 Write-Host ''
 Write-Host '  Publish dist\Polish.ps1 to your repo, then share:' -ForegroundColor White
-Write-Host '    irm https://raw.githubusercontent.com/YOUR-USERNAME/polish/main/dist/Polish.ps1 | iex' -ForegroundColor Cyan
+Write-Host '    irm https://raw.githubusercontent.com/spandanandhale2007-max/Polish-made-by-spandy/main/dist/Polish.ps1 | iex' -ForegroundColor Cyan
 Write-Host ''
