@@ -88,9 +88,16 @@ $bundled = [regex]::Replace($entryText, $startRx, { $banner })
 $outDir = Split-Path -Parent $OutFile
 if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
 
-# UTF-8 with BOM, so Windows PowerShell 5.1 reads the non-ASCII characters in
-# the help text correctly when the file is piped in from the web.
-$enc = New-Object System.Text.UTF8Encoding($true)
+# UTF-8 with NO byte-order mark.
+#
+# This is not a style preference, it is required. Invoke-RestMethod returns the
+# BOM as a literal U+FEFF character at the start of the string, and
+# "﻿<#" stops PowerShell recognising the opening comment block, so the
+# whole help header gets parsed as code and  irm <url> | iex  dies with
+# "Unexpected token 'param'". Reading the same file from disk hides the problem,
+# because Get-Content treats the BOM as an encoding signature and strips it.
+# Keep this $false.
+$enc = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($OutFile, $bundled, $enc)
 
 # ---- verify the output ---------------------------------------------------
@@ -102,6 +109,24 @@ if ($errors -and $errors.Count -gt 0) {
     Write-Host '  BUNDLE DOES NOT PARSE' -ForegroundColor Red
     foreach ($e in $errors) { Write-Host ("    line {0}: {1}" -f $e.Extent.StartLineNumber, $e.Message) -ForegroundColor Red }
     throw 'bundle failed verification'
+}
+
+# ---- verify the irm | iex path specifically -----------------------------
+# ParseFile above reads from disk and would not catch a BOM regression. This
+# reproduces what the network actually hands to iex: the decoded text, BOM and
+# all, turned into a scriptblock.
+$firstBytes = [System.IO.File]::ReadAllBytes($OutFile)
+if ($firstBytes.Length -ge 3 -and $firstBytes[0] -eq 0xEF -and $firstBytes[1] -eq 0xBB -and $firstBytes[2] -eq 0xBF) {
+    throw 'bundle starts with a UTF-8 BOM, which breaks irm | iex. Write it with UTF8Encoding($false).'
+}
+$asServed = [System.Text.Encoding]::UTF8.GetString($firstBytes)
+try {
+    [void][scriptblock]::Create($asServed)
+    Write-Host '  irm | iex simulation: parses as a scriptblock' -ForegroundColor Green
+} catch {
+    Write-Host '  BUNDLE FAILS THE irm | iex PATH' -ForegroundColor Red
+    Write-Host ("    {0}" -f $_.Exception.Message) -ForegroundColor Red
+    throw 'bundle would fail when piped from the web'
 }
 
 $size = (Get-Item -LiteralPath $OutFile).Length

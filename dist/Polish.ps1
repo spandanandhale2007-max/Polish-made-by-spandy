@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Polish - a Windows tune-up and debloat tool that can undo itself.
 
@@ -110,7 +110,7 @@ $script:PolishLogFile  = $null
 #region POLISH_BUNDLED_SOURCES
 # ---------------------------------------------------------------------------
 #  This file is GENERATED. Do not edit it by hand.
-#  Built from src/ by build/Build-SingleFile.ps1 on 2026-10-12 10:38
+#  Built from src/ by build/Build-SingleFile.ps1 on 2026-10-12 11:02
 #  Edit the files under src/ and rebuild.
 # ---------------------------------------------------------------------------
 
