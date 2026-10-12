@@ -29,6 +29,7 @@ $sources = @(
     'src\Core\Safety.ps1'
     'src\Core\Engine.ps1'
     'src\Modules\Processes.ps1'
+    'src\Modules\Memory.ps1'
     'src\Modules\Bloat.ps1'
     'src\Core\Catalog.ps1'
     'src\Cli.ps1'

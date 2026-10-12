@@ -281,6 +281,33 @@ function Get-PolishCatalog {
     }
 
     _add @{
+        Id = 'cache.ramlow'; Module = 'Caches'
+        Name = 'Clear the RAM cache (gentle)'
+        Detail = 'Drops the low-priority part of the standby list: speculative read-ahead data Windows guessed you might want. Frees physical RAM now and leaves the cache that is actually being used. This is the version to run before launching a big game or a VM.'
+        Risk = 'Safe'; Undo = 'None'; Default = $false; Reboot = $false; NeedsAdmin = $true
+        Applies = { param($s) $true }
+        Apply = { param($Ctx) [void](Invoke-PolishMemoryPurge -Ctx $Ctx -Mode 'LowPriority') }
+    }
+
+    _add @{
+        Id = 'cache.ram'; Module = 'Caches'
+        Name = 'Clear the RAM cache (purge everything)'
+        Detail = 'Purges the whole standby list, the same thing RAMMap "Empty Standby List" does. Shows the biggest jump in free memory. THE COST: standby is file data held in RAM so Windows does not re-read it from disk, and Windows already hands it back instantly when a program needs memory. Purging it means everything re-reads from disk, so the machine is slower for the next few minutes. Worth it right before something big wants a lot of contiguous RAM. Not worth running repeatedly, and never worth putting on a schedule.'
+        Risk = 'Moderate'; Undo = 'None'; Default = $false; Reboot = $false; NeedsAdmin = $true
+        Applies = { param($s) $true }
+        Apply = { param($Ctx) [void](Invoke-PolishMemoryPurge -Ctx $Ctx -Mode 'Standby') }
+    }
+
+    _add @{
+        Id = 'cache.rammodified'; Module = 'Caches'
+        Name = 'Flush pending memory writes to disk'
+        Detail = 'Writes out pages that have been changed in RAM but not yet saved to disk, then frees them. Causes a short disk burst and loses nothing at all, unlike the two above. Useful if free memory is tight and the modified list has grown large.'
+        Risk = 'Safe'; Undo = 'None'; Default = $false; Reboot = $false; NeedsAdmin = $true
+        Applies = { param($s) $true }
+        Apply = { param($Ctx) [void](Invoke-PolishMemoryPurge -Ctx $Ctx -Mode 'Modified') }
+    }
+
+    _add @{
         Id = 'cache.temp'; Module = 'Caches'
         Name = 'Clear temp files'
         Detail = 'Deletes temporary files older than 24 hours from your user temp folder and, with admin, from the Windows temp folder. Files currently in use are skipped. No downside.'

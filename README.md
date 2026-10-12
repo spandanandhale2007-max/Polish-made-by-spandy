@@ -53,6 +53,32 @@ because you might be in a call.
 
 ---
 
+## Clearing the RAM cache
+
+Windows keeps three separate pools people call "RAM cache", and Polish exposes
+them separately because clearing each costs something different:
+
+| Action | What it drops | Cost |
+|---|---|---|
+| `cache.ramlow` | Low-priority standby: speculative read-ahead Windows guessed you might want | Almost none. Start here. |
+| `cache.ram` | The entire standby list | Everything re-reads from disk for a few minutes |
+| `cache.rammodified` | Pages changed in RAM but not yet written to disk | A short disk burst. Loses nothing. |
+
+Run `-Memory` first to see what you actually have. On a machine with 2.5 GB
+sitting in standby, `cache.ram` returns about 2.2 GB of free physical RAM
+immediately.
+
+Standby is not wasted memory. Windows hands it back the instant a program asks
+for memory, so a low "free" number with a high "cached" number is a healthy
+machine, not a problem. The honest use for purging it is right before launching
+a large game, a VM or a render, when you want the RAM free now rather than
+negotiated mid-task. Running it on a loop just means reading from disk forever.
+
+Both standby actions need administrator, because the kernel call behind them
+requires `SeProfileSingleProcessPrivilege`.
+
+---
+
 ## What's in it
 
 | Module | What it covers |
@@ -60,7 +86,7 @@ because you might be in a call.
 | **Optimize** | Close background apps, free RAM, flush DNS, restart Explorer |
 | **Gaming** | Game Mode, disable background recording, true fullscreen, mouse acceleration, GPU scheduling, power plan |
 | **Startup** | Disable third-party startup programs and OEM nag tasks |
-| **Caches** | GPU shader cache, temp files, Windows Update leftovers, browser caches, thumbnails, recycle bin |
+| **Caches** | RAM cache (standby list), GPU shader cache, temp files, Windows Update leftovers, browser caches, thumbnails, recycle bin |
 | **Privacy** | Telemetry, advertising ID, targeted ads, activity history |
 | **Features** | Copilot, Recall, Widgets, Bing results in Start, Edge nags |
 | **Visual** | Instant interface response, transparency off |
@@ -137,9 +163,14 @@ These are hard-coded refusals, not unticked boxes:
   laptop model needs, and this is precisely where function keys and fan control
   break. Polish detects your manufacturer, protects anything matching those
   roles, reports the rest as *unknown risk*, and refuses to batch-disable them.
-- **Never flushes the standby memory list.** That's the trick optimizers use to
-  make the "free RAM" number jump. It throws away cached data your programs are
-  about to want, so you get a bigger number and a slower PC.
+- **Never hides the cost of clearing the RAM cache.** Polish does have a standby
+  list purge (`cache.ram`), because it is genuinely useful right before
+  launching something that wants a lot of contiguous memory. But it tells you
+  what you are paying: the standby list is file data held in RAM so Windows does
+  not re-read it from disk, Windows already hands it back instantly when a
+  program needs memory, and purging it means re-reading from disk for the next
+  few minutes. It is never pre-ticked, and `cache.ramlow` offers the gentle
+  version that drops only speculative read-ahead data.
 
 ---
 
@@ -149,12 +180,15 @@ These are hard-coded refusals, not unticked boxes:
 .\Polish.ps1                                   # open the window
 .\Polish.ps1 -List                             # every action for this machine
 .\Polish.ps1 -Processes                         # what's running, what would close
+.\Polish.ps1 -Memory                            # RAM breakdown: free vs cached
 
 .\Polish.ps1 -Preset safe                       # all Safe, no-restart actions
 .\Polish.ps1 -Preset recommend                  # Safe + Moderate
 .\Polish.ps1 -Preset all                        # everything applicable
 
 .\Polish.ps1 -Only optimize.closebg,optimize.trimram
+.\Polish.ps1 -Only cache.ramlow                 # clear RAM cache, gentle
+.\Polish.ps1 -Only cache.ram                    # clear RAM cache, everything
 .\Polish.ps1 -Only Gaming,Privacy               # whole modules work too
 .\Polish.ps1 -Preset safe -Skip cache.browser
 

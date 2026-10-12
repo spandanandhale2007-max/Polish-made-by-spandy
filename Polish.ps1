@@ -86,6 +86,7 @@ param(
     [string]$Undo,
     [switch]$List,
     [switch]$Processes,
+    [switch]$Memory,
     [switch]$Quiet,
     [switch]$NoElevate,
     [switch]$NoPause
@@ -112,6 +113,7 @@ $polishSources = @(
     'src\Core\Safety.ps1'
     'src\Core\Engine.ps1'
     'src\Modules\Processes.ps1'
+    'src\Modules\Memory.ps1'
     'src\Modules\Bloat.ps1'
     'src\Core\Catalog.ps1'
     'src\Cli.ps1'
@@ -180,6 +182,7 @@ if ($Preset -and ($validPresets -notcontains $Preset.ToLowerInvariant())) {
 $mode = 'Gui'
 if     ($List)      { $mode = 'List' }
 elseif ($Processes) { $mode = 'Processes' }
+elseif ($Memory)    { $mode = 'Memory' }
 elseif ($Undo)      { $mode = 'Undo' }
 elseif ($Preset -or $Only -or $Skip -or $DryRun) { $mode = 'Run' }
 
@@ -192,6 +195,10 @@ switch ($mode) {
 
     'Processes' {
         Show-PolishProcesses
+    }
+
+    'Memory' {
+        Show-PolishMemory
     }
 
     'Undo' {
